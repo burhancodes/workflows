@@ -1,0 +1,26 @@
+name: lmodroid upstream 
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 6'
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Update the fork
+        run: |
+          git clone https://${{ secrets.PAT }}@github.com/burhancodes/lmodroid repo
+          cd repo
+          git config user.name "burhanverse"
+          git config user.email "contact@burhanverse.eu.org"
+          git remote add upstream https://github.com/LMODroid/manifest.git
+          git fetch upstream
+          for branch in $(git branch -r | grep 'upstream/' | grep -v 'HEAD' | sed 's/upstream\///'); do
+            git checkout $branch || git checkout -b $branch upstream/$branch
+            git merge upstream/$branch
+            git push origin $branch
+          done
+          
