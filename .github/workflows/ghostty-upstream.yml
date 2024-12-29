@@ -1,0 +1,23 @@
+name: Ghostty upstream 
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Update the fork
+        run: |
+          git clone https://${{ secrets.PAT }}@github.com/burhancodes/ghostty repo
+          cd repo
+          git config user.name "burhanverse"
+          git config user.email "contact@burhanverse.eu.org"
+          git remote add upstream https://github.com/ghostty-org/ghostty.git
+          git fetch upstream
+          git checkout main
+          git merge upstream/main
+          git push origin main
