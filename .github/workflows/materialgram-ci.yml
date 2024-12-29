@@ -10,13 +10,6 @@ jobs:
     runs-on: ubuntu-24.04
     
     steps:
-      - name: Clone spec repo
-        id: clone_spec
-        run: |
-          git clone https://${{ secrets.PAT }}@github.com/burhancodes/materialgram-rpm spec
-          cd spec
-          rm -rf .git
-          
       - name: Fetch latest release tag
         id: fetch_tag
         run: |
@@ -31,7 +24,7 @@ jobs:
       - name: Check for version update
         id: check_update
         run: |
-          current_version=$(grep -E '^Version:' materialgram.spec | awk '{print $2}')
+          current_version=$(curl -s https://raw.githubusercontent.com/burhancodes/materialgram-rpm/refs/heads/master/materialgram.spec | grep -E '^Version:' | awk '{print $2}')
           echo "Current version: $current_version"
           echo "Latest tag (sanitized): $tag"
           if [[ "$current_version" == "$tag" ]]; then
