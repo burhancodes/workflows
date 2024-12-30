@@ -3,7 +3,7 @@ name: Ghostty upstream
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */1 * * *'
 
 jobs:
   sync-upstream:
@@ -17,9 +17,9 @@ jobs:
           sleep 10
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
-          sleep 30
+          sleep 10
           git remote add upstream https://github.com/ghostty-org/ghostty.git
-          sleep 30
+          sleep 10
           git fetch upstream
           sleep 10
           git checkout main
