@@ -1,9 +1,9 @@
-name: Update materialgram.spec
+name: Update materialgram SPEC
 
 on:
-  schedule:
-    - cron: "0 */2 * * *"
   workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'
 
 jobs:
   update-materialgram:
