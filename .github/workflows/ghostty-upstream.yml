@@ -14,16 +14,16 @@ jobs:
         run: |
           git clone https://${{ secrets.PAT }}@github.com/burhancodes/ghostty repo
           cd repo
-          sleep 10
+          sleep 5
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
-          sleep 10
+          sleep 5
           git remote add upstream https://github.com/ghostty-org/ghostty.git
-          sleep 10
+          sleep 5
           git fetch upstream
           sleep 10
           git checkout main
-          sleep 10
+          sleep 5
           git merge upstream/main
           sleep 10
           git push origin main
