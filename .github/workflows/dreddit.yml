@@ -22,11 +22,10 @@ jobs:
           npm install 
           npx expo prebuild 
           cd android 
-          ./gradlew assembleRelease 
-          zip -r ../dreddit-build.zip app/build
+          ./gradlew assembleRelease
     
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: dreddit-build
-          path: ./dreddit-build.zip
+          path: ${{ github.workspace }}/dreddit/android/app/build/outputs/apk/release/app-release.apk
