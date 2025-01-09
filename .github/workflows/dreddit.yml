@@ -18,11 +18,11 @@ jobs:
       - name: Clone source
         run: |
           git clone https://github.com/tictechtown/dreddit 
-          cd dreddit/
-          npm install \
-          npx expo prebuild \
-          cd android \
-          ./gradlew assembleRelease \
+          cd dreddit
+          npm install 
+          npx expo prebuild 
+          cd android 
+          ./gradlew assembleRelease 
           mv ./android/app/build/outputs/apk/release/app-release.apk "./dreddit.apk"
     
       - name: Upload APK
