@@ -43,44 +43,26 @@ jobs:
           git commit -m "Update to version ${{ env.new_version }}"
           git push
           zip -r repo/Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
-
-      # Create a release in the remote repository using the GitHub API
-      - name: Create release in remote repo
-        env:
-          TOKEN: ${{ secrets.BVPAT }}
-          OWNER: Magisk-Modules-Alt-Repo
-          REPO: systemless-adblocker
-          VERSION: ${{ env.new_version }}
-        run: |
           curl -X POST \
-            -H "Authorization: Bearer $TOKEN" \
+            -H "Authorization: Bearer ${{ secrets.BVPAT }}" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/$OWNER/$REPO/releases \
+            https://api.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases \
             -d @- << EOF
           {
-            "tag_name": "v$VERSION",
-            "name": "Systemless Adblocker v$VERSION",
-            "body": "Automated release of Systemless Adblocker v$VERSION",
+            "tag_name": "v${{ env.new_version }}",
+            "name": "Systemless Adblocker v${{ env.new_version }}",
+            "body": "Automated release of Systemless Adblocker v${{ env.new_version }}",
             "draft": false,
             "prerelease": false
           }
           EOF
-
-      # Upload the zip file to the release
-      - name: Upload asset to release
-        env:
-          TOKEN: ${{ secrets.BVPAT }}
-          OWNER: Magisk-Modules-Alt-Repo
-          REPO: systemless-adblocker
-          VERSION: ${{ env.new_version }}
-        run: |
           RELEASE_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/$OWNER/$REPO/releases/tags/v$VERSION | jq -r .id)
+            https://api.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases/tags/v${{ env.new_version }} | jq -r .id)
 
           curl -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/zip" \
             --data-binary @repo/Systemless_Adblocker_V${{ env.new_version }}.zip \
-            https://uploads.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
+            https://uploads.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
