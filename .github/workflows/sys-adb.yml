@@ -82,6 +82,6 @@ jobs:
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/zip" \
-            --data-binary @<remote-repo>/Systemless_Adblocker_V${{ env.new_version }}.zip \
+            --data-binary @repo/Systemless_Adblocker_V${{ env.new_version }}.zip \
             https://uploads.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
           
