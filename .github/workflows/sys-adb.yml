@@ -42,7 +42,7 @@ jobs:
           git add module.prop changelog.md update.json
           git commit -m "Update to version ${{ env.new_version }}"
           git push
-          zip -r repo/Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
+          zip -r Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.BVPAT }}" \
             -H "Accept: application/vnd.github+json" \
