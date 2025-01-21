@@ -1,9 +1,8 @@
 name: Dreddit APK Builder
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  
 jobs:
   apk:
     name: Setup 
