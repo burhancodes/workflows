@@ -43,14 +43,45 @@ jobs:
           git commit -m "Update to version ${{ env.new_version }}"
           git push
           zip -r Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
-          
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.new_version }}
-          release_name: Systemless Adblocker v${{ env.new_version }}
-          body: "Automated release of Systemless Adblocker v${{ env.new_version }}"
-          files: Systemless_Adblocker_V${{ env.new_version }}.zip
+
+      # Create a release in the remote repository using the GitHub API
+      - name: Create release in remote repo
         env:
-          GITHUB_TOKEN: ${{ secrets.BVPAT }}
+          TOKEN: ${{ secrets.BVPAT }}
+          OWNER: Magisk-Modules-Alt-Repo
+          REPO: systemless-adblocker
+          VERSION: ${{ env.new_version }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$OWNER/$REPO/releases \
+            -d @- << EOF
+          {
+            "tag_name": "v$VERSION",
+            "name": "Systemless Adblocker v$VERSION",
+            "body": "Automated release of Systemless Adblocker v$VERSION",
+            "draft": false,
+            "prerelease": false
+          }
+          EOF
+
+      # Upload the zip file to the release
+      - name: Upload asset to release
+        env:
+          TOKEN: ${{ secrets.BVPAT }}
+          OWNER: Magisk-Modules-Alt-Repo
+          REPO: systemless-adblocker
+          VERSION: ${{ env.new_version }}
+        run: |
+          RELEASE_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$OWNER/$REPO/releases/tags/v$VERSION | jq -r .id)
+
+          curl -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/zip" \
+            --data-binary @<remote-repo>/Systemless_Adblocker_V${{ env.new_version }}.zip \
+            https://uploads.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
           
