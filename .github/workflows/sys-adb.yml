@@ -15,7 +15,7 @@ jobs:
         
       - name: Checkout Repository
         run: |
-          git clone https://x-access-token:${{ secrets.bvPAT }}@github.com/Magisk-Modules-Alt-Repo/systemless-adblocker repo
+          git clone https://x-access-token:${{ secrets.BVPAT }}@github.com/Magisk-Modules-Alt-Repo/systemless-adblocker repo
           cd repo
           current_version=$(grep '^version=' module.prop | cut -d'=' -f2)
           current_version_code=$(grep '^versionCode=' module.prop | cut -d'=' -f2)
@@ -52,5 +52,5 @@ jobs:
           body: "Automated release of Systemless Adblocker v${{ env.new_version }}"
           files: Systemless_Adblocker_V${{ env.new_version }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.bvPAT }}
+          GITHUB_TOKEN: ${{ secrets.BVPAT }}
           
