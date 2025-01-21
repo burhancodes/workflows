@@ -42,7 +42,7 @@ jobs:
           git add module.prop changelog.md update.json
           git commit -m "Update to version ${{ env.new_version }}"
           git push
-          zip -r Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
+          zip -r repo/Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
 
       # Create a release in the remote repository using the GitHub API
       - name: Create release in remote repo
@@ -84,4 +84,3 @@ jobs:
             -H "Content-Type: application/zip" \
             --data-binary @repo/Systemless_Adblocker_V${{ env.new_version }}.zip \
             https://uploads.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
-          
