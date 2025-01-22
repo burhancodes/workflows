@@ -6,63 +6,12 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  update:
+  trigger-workflow:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install zip
-        run: sudo apt-get install -y zip git
-        
-      - name: Checkout Repository
-        run: |
-          git clone https://x-access-token:${{ secrets.BVPAT }}@github.com/Magisk-Modules-Alt-Repo/systemless-adblocker repo
-          cd repo
-          current_version=$(grep '^version=' module.prop | cut -d'=' -f2)
-          current_version_code=$(grep '^versionCode=' module.prop | cut -d'=' -f2)
-          minor_version=$(echo "$current_version" | cut -d'.' -f2)
-          new_minor_version=$((minor_version + 1))
-          new_version="1.${new_minor_version}"
-          new_version_code=$((current_version_code + 1))
-          echo "new_version=$new_version" >> $GITHUB_ENV
-          echo "new_version_code=$new_version_code" >> $GITHUB_ENV
-          sed -i "s/^version=.*/version=${{ env.new_version }}/" module.prop
-          sed -i "s/^versionCode=.*/versionCode=${{ env.new_version_code }}/" module.prop
-          sed -i 's/^author=.*/author=burhanverse/' module.prop
-          sed -i "5s/^/## v${{ env.new_version }}\n- Updated hosts.\n\n/" changelog.md
-          cat <<EOT > update.json
-          {
-            "version": "${{ env.new_version }}",
-            "versionCode": ${{ env.new_version_code }},
-            "zipUrl": "https://github.com/Magisk-Modules-Alt-Repo/systemless-adblocker/releases/download/${{ env.new_version }}/Systemless_Adblocker_V${{ env.new_version }}.zip",
-            "changelog": "https://raw.githubusercontent.com/Magisk-Modules-Alt-Repo/systemless-adblocker/main/changelog.md"
-          }
-          EOT
-          git config user.name "burhanverse"
-          git config user.email "contact@burhanverse.eu.org"
-          git add module.prop changelog.md update.json
-          git commit -m "Update to version ${{ env.new_version }}"
-          git push
-          zip -r Systemless_Adblocker_V${{ env.new_version }}.zip . -x ".github/*" ".git/*"
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.BVPAT }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases \
-            -d @- << EOF
-          {
-            "tag_name": "v${{ env.new_version }}",
-            "name": "Systemless Adblocker v${{ env.new_version }}",
-            "body": "Automated release of Systemless Adblocker v${{ env.new_version }}",
-            "draft": false,
-            "prerelease": false
-          }
-          EOF
-          RELEASE_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases/tags/v${{ env.new_version }} | jq -r .id)
-
-          curl -X POST \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/zip" \
-            --data-binary Systemless_Adblocker_V${{ env.new_version }}.zip \
-            https://uploads.github.com/repos/Magisk-Modules-Alt-Repo/systemless-adblocker/releases/$RELEASE_ID/assets?name=Systemless_Adblocker_V${{ env.new_version }}.zip
+      - name: Trigger RPM repository dispatch event
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SOS }}
+          repository: Magisk-Modules-Alt-Repo/systemless-adblocker
+          event-type: new-release
