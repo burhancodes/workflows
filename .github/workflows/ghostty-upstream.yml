@@ -3,7 +3,7 @@ name: Ghostty upstream
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */1 * * *'
+    - cron: '0 0 * * *'
 
 jobs:
   sync-upstream:
