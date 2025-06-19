@@ -7,7 +7,7 @@ on:
 
 jobs:
   sync-upstream:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Upstream the forked source
         run: |
