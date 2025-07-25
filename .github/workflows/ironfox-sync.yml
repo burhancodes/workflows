@@ -1,0 +1,131 @@
+name: IronFox Upstream Sync
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+env:
+  UPSTREAM_REPO: 'https://gitlab.com/ironfox-oss/IronFox'
+  FORK_REPO: 'https://github.com/burhancodes/IronFox'
+  TARGET_BRANCH: 'mocha'
+
+jobs:
+  check-and-sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DISPATCH }}
+          fetch-depth: 0
+
+      - name: Setup Git configuration
+        run: |
+          git config user.name "burhanverse"
+          git config user.email "contact@burhanverse.eu.org"
+
+      - name: Get latest upstream tag
+        id: get-upstream-tag
+        run: |
+          # Get the latest tag from GitLab upstream
+          echo "Fetching latest tag from upstream GitLab repository..."
+          LATEST_TAG=$(git ls-remote --tags --sort=version:refname $UPSTREAM_REPO | tail -n1 | cut -d'/' -f3)
+          echo "Latest upstream tag: $LATEST_TAG"
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Clone fork repository
+        run: |
+          echo "Cloning fork repository..."
+          git clone $FORK_REPO ironfox-fork
+          cd ironfox-fork
+
+      - name: Add upstream remote and fetch
+        working-directory: ./ironfox-fork
+        run: |
+          echo "Adding upstream remote..."
+          git remote add upstream $UPSTREAM_REPO
+          git fetch upstream
+          git fetch upstream --tags
+
+      - name: Check if tag exists locally
+        id: check-tag
+        working-directory: ./ironfox-fork
+        run: |
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists locally"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG is new"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout and update target branch
+        if: steps.check-tag.outputs.exists == 'false'
+        working-directory: ./ironfox-fork
+        run: |
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
+          echo "Processing new tag: $TAG"
+          
+          # Checkout or create the target branch
+          if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
+            echo "Checking out existing $TARGET_BRANCH branch"
+            git checkout $TARGET_BRANCH
+            git pull origin $TARGET_BRANCH
+          else
+            echo "Creating new $TARGET_BRANCH branch"
+            git checkout -b $TARGET_BRANCH
+          fi
+
+      - name: Merge upstream tag
+        if: steps.check-tag.outputs.exists == 'false'
+        working-directory: ./ironfox-fork
+        run: |
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
+          echo "Merging upstream tag $TAG into $TARGET_BRANCH"
+          
+          # Attempt to merge the tag
+          if git merge "upstream/$TAG" --no-edit; then
+            echo "Merge successful"
+          else
+            echo "Merge conflicts detected. Manual intervention may be required."
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Push changes to fork
+        if: steps.check-tag.outputs.exists == 'false'
+        working-directory: ./ironfox-fork
+        run: |
+          echo "Pushing changes to fork repository..."
+          git push origin $TARGET_BRANCH
+
+      - name: Trigger build workflow
+        if: steps.check-tag.outputs.exists == 'false'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DISPATCH }}
+          repository: burhancodes/IronFox
+          event-type: build-ironfox
+          client-payload: |
+            {
+              "version_name": "${{ steps.get-upstream-tag.outputs.tag }}",
+              "version_64": "arm64",
+              "version_32": "arm", 
+              "version_86": "x86_64",
+              "buildType": "release"
+            }
+
+      - name: Summary
+        run: |
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
+          if [ "${{ steps.check-tag.outputs.exists }}" == "false" ]; then
+            echo "✅ New tag $TAG detected and processed successfully"
+            echo "✅ Merged into $TARGET_BRANCH branch"
+            echo "✅ Build workflow triggered"
+          else
+            echo "ℹ️ No new tags found. Latest tag $TAG already processed."
+          fi
+          
