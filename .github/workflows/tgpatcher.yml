@@ -1,0 +1,73 @@
+name: Patch Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_link:
+        description: "APK file URL to be patched"
+        required: true
+        type: string
+
+jobs:
+  run-patcher:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '17'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install Java, Python dependencies, and zipalign
+      run: |
+        sudo apt-get install -y aapt zipalign
+        pip install requests colorama
+
+    - name: Download Tools
+      run: |
+        wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar -O apktool.jar
+        wget -q https://raw.githubusercontent.com/AbhiTheModder/termux-scripts/refs/heads/main/tgupload.py -O tgupload.py
+        wget -q https://raw.githubusercontent.com/AbhiTheModder/termux-scripts/refs/heads/main/tgpatcher.py -O tgpatcher.py
+
+    - name: Modify tgpatcher.py
+      run: |
+        sed -i 's/Mod by Abhi/by AquaLabs/' tgpatcher.py
+        grep "by AquaLabs" tgpatcher.py || echo "Pattern not found or replacement failed"
+
+    - name: Download and Decompile APK
+      run: |
+        wget -q "${{ github.event.inputs.apk_link }}" -O plus.apk
+        echo "Downloaded APK: plus.apk"
+        java -jar apktool.jar d plus.apk -f
+
+    - name: Patch and Build APK
+      run: |
+        python3 tgpatcher.py --anti --dir plus/
+        java -jar apktool.jar b plus/ -o Plus_Anti_Patched.apk
+        rm -rf plus.apk
+
+    - name: Align APK
+      run: |
+        zipalign -p -f 4 Plus_Anti_Patched.apk Plus_Anti_Patched_aligned.apk
+        echo "APK aligned: Plus_Anti_Patched_aligned.apk"
+        rm -rf Plus_Anti_Patched.apk
+
+    - name: Send APK to Telegram
+      run: |
+        pip install pyrofork tgcrypto
+        export BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+        export API_ID=${{ secrets.API_ID }}
+        export API_HASH=${{ secrets.API_HASH }}
+        python3 tgupload.py Plus_Anti_Patched_aligned.apk --chat-id ${{ secrets.CHAT_ID }} --caption "$(cat <<EOF
+        **Released by [ Sid ]**
+        EOF
+        )"
