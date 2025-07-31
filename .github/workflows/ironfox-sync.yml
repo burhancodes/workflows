@@ -2,7 +2,7 @@ name: IronFox Upstream Sync
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 */1 * * *'
   workflow_dispatch:
 
 env:
@@ -52,7 +52,7 @@ jobs:
       - name: Clone fork repository
         run: |
           echo "Cloning fork repository..."
-          git clone $FORK_REPO ironfox-fork
+          git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git ironfox-fork
           cd ironfox-fork
 
       - name: Add upstream remote and fetch
