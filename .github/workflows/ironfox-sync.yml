@@ -182,7 +182,7 @@ jobs:
           git config user.name "itsnotsos"
           git config user.email "179767921+itsnotsos@users.noreply.github.com"
           git add ironfox.txt
-          git commit -m "Update ironfox sync to tag ${{ needs.check-and-sync.outputs.latest-tag }}"
+          git commit -m "Updated ironfox to ${{ needs.check-and-sync.outputs.latest-tag }}"
           git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
