@@ -2,7 +2,7 @@ name: IronFox Upstream Sync
 
 on:
   schedule:
-    - cron: '0 */1 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 env:
@@ -23,11 +23,6 @@ jobs:
         with:
           token: ${{ secrets.DISPATCH }}
           fetch-depth: 0
-
-      - name: Setup Git configuration
-        run: |
-          git config user.name "burhanverse"
-          git config user.email "contact@burhanverse.eu.org"
 
       - name: Get latest upstream tag
         id: get-upstream-tag
@@ -63,6 +58,9 @@ jobs:
       - name: Add upstream remote and fetch
         working-directory: ./ironfox-fork
         run: |
+          echo "Setting up git configuration..."
+          git config user.name "burhanverse"
+          git config user.email "contact@burhanverse.eu.org"
           echo "Adding upstream remote..."
           git remote add upstream $UPSTREAM_REPO
           git fetch upstream
