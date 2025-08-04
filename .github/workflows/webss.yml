@@ -2,7 +2,7 @@ name: Ping WebSS Docs
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # Runs every 10 minute
+    - cron: '*/15 * * * *' # Runs every 10 minute
   workflow_dispatch:
 
 jobs:
