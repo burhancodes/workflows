@@ -2,8 +2,8 @@ name: Ping WebSS Docs
 
 on:
   schedule:
-    - cron: '* * * * *' # Runs every minute
-  workflow_dispatch: # Allows manual triggering
+    - cron: '*/10 * * * *' # Runs every 10 minute
+  workflow_dispatch:
 
 jobs:
   ping:
@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Ping WebSS Docs
         run: curl -s -o /dev/null -w "%{http_code}" https://webss-latest.onrender.com/docs
-        continue-on-error: true # Continues even if ping fails
+        continue-on-error: true
