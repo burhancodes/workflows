@@ -117,12 +117,17 @@ jobs:
             exit 1
           fi
 
-      - name: Push changes to fork
+      - name: Push changes and create tag
         if: steps.check-tag.outputs.new_tag == 'true'
         working-directory: ./ironfox-fork
         run: |
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
           echo "Pushing changes to fork repository..."
           git push origin $TARGET_BRANCH
+          
+          echo "Creating and pushing tag $TAG..."
+          git tag -a "$TAG" -m "Sync from upstream tag $TAG"
+          git push origin "$TAG"
 
       - name: Set sync completion status
         id: sync-status
@@ -136,22 +141,6 @@ jobs:
             echo "No sync required or sync failed"
           fi
 
-      - name: Trigger build workflow
-        if: steps.check-tag.outputs.new_tag == 'true'
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.DISPATCH }}
-          repository: burhancodes/IronFox
-          event-type: build-ironfox
-          client-payload: |
-            {
-              "version_name": "${{ steps.get-upstream-tag.outputs.tag }}",
-              "version_64": "arm64",
-              "version_32": "arm", 
-              "version_86": "x86_64",
-              "buildType": "release"
-            }
-
       - name: Summary
         if: always()
         run: |
@@ -159,7 +148,7 @@ jobs:
           if [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ] && [ "${{ job.status }}" == "success" ]; then
             echo "✅ New tag $TAG detected and processed successfully"
             echo "✅ Merged into $TARGET_BRANCH branch"
-            echo "✅ Build workflow triggered"
+            echo "✅ Tag $TAG created and pushed"
           elif [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ]; then
             echo "❌ New tag $TAG detected but sync failed"
           else
