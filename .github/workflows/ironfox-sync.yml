@@ -91,7 +91,6 @@ jobs:
           ORIGINAL_TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
           echo "Processing new tag: $TAG (original: $ORIGINAL_TAG)"
           
-          # Checkout or create the target branch
           if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
             echo "Checking out existing $TARGET_BRANCH branch"
             git checkout $TARGET_BRANCH
@@ -100,22 +99,23 @@ jobs:
             echo "Creating new $TARGET_BRANCH branch"
             git checkout -b $TARGET_BRANCH
           fi
+          
+          # Merge the commit behind the upstream tag into mocha
+          UPSTREAM_COMMIT=$(git rev-list -n 1 "refs/tags/$ORIGINAL_TAG")
+          echo "Merging upstream commit $UPSTREAM_COMMIT from tag $ORIGINAL_TAG"
+          git merge --no-edit "$UPSTREAM_COMMIT" || { echo "Merge failed"; exit 1; }
 
-      - name: Merge upstream tag
+      - name: Push mocha branch and create tag
         if: steps.check-tag.outputs.new_tag == 'true'
         working-directory: ./ironfox-fork
         run: |
-          ORIGINAL_TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
-          echo "Merging upstream tag $ORIGINAL_TAG into $TARGET_BRANCH"
+          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
+          echo "Pushing mocha branch..."
+          git push origin $TARGET_BRANCH
           
-          # Attempt to merge the tag
-          if git merge "upstream/$ORIGINAL_TAG" --no-edit; then
-            echo "Merge successful"
-          else
-            echo "Merge conflicts detected. Manual intervention may be required."
-            git merge --abort
-            exit 1
-          fi
+          echo "Creating tag $TAG from mocha branch..."
+          git tag -f -a "$TAG" -m "Sync from upstream tag $TAG (merged into mocha)"
+          git push origin "$TAG" --force
 
       - name: Push changes and create tag
         if: steps.check-tag.outputs.new_tag == 'true'
