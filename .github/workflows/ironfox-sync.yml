@@ -51,7 +51,6 @@ jobs:
         run: |
           echo "Cloning fork repository..."
           git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git ironfox-fork
-          cd ironfox-fork
 
       - name: Add upstream remote and fetch
         working-directory: ./ironfox-fork
@@ -59,7 +58,12 @@ jobs:
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream $UPSTREAM_REPO
-          git fetch upstream --tags
+          
+          echo "Fetching upstream branches..."
+          git fetch upstream
+          
+          echo "Fetching upstream tags without clobbering local tags..."
+          git fetch upstream +refs/tags/*:refs/tags/*
 
       - name: Check if new tag is available
         id: check-tag
