@@ -1,4 +1,4 @@
-name: IronFox Upstream Sync
+#name: IronFox Upstream Sync
 
 on:
   schedule:
