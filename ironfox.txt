@@ -1,2 +1,2 @@
-Last updated: 2025-09-25 09:15:27 UTC
-Latest synced tag: 143.0.2
+Last updated: 2025-10-01 16:18:31 UTC
+Latest synced tag: 143.0.3
