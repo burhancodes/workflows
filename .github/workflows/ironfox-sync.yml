@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  UPSTREAM_REPO: 'https://gitlab.com/ironfox-oss/IronFox'
+  UPSTREAM_REPO: 'https://github.com/ironfox-oss/IronFox'
   FORK_REPO: 'https://github.com/burhancodes/IronFox'
   TARGET_BRANCH: 'mocha'
 
