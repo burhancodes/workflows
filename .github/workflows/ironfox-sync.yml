@@ -18,7 +18,7 @@ jobs:
       latest-tag: ${{ steps.get-upstream-tag.outputs.tag }}
 
     steps:
-      - name: Checkout fork repository
+      - name: Checkout control repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.DISPATCH }}
@@ -28,21 +28,22 @@ jobs:
         id: get-upstream-tag
         run: |
           echo "Fetching latest tag from upstream..."
-          LATEST_TAG=$(git ls-remote --tags --sort=version:refname $UPSTREAM_REPO | tail -n1 | cut -d'/' -f3)
+          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname $UPSTREAM_REPO | 
+                       grep -v '^{}' | head -n1 | sed 's/.*refs/tags///')
           CLEAN_TAG=$(echo "$LATEST_TAG" | sed 's/^v//')
           echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
           echo "original_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag found: $LATEST_TAG"
+          echo "📦 Latest upstream tag: $LATEST_TAG"
 
       - name: Get current synced tag from ironfox.txt
         id: get-current-tag
         run: |
           if [ -f "ironfox.txt" ]; then
-            CURRENT_TAG=$(grep "Latest synced tag:" ironfox.txt | cut -d' ' -f4)
-            echo "Current synced tag: $CURRENT_TAG"
+            CURRENT_TAG=$(awk '/Latest synced tag:/ {print $4}' ironfox.txt)
+            echo "📌 Current synced tag: $CURRENT_TAG"
             echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
           else
-            echo "ironfox.txt not found, treating as first sync"
+            echo "ℹ️ ironfox.txt not found, treating as first sync"
             echo "current_tag=" >> $GITHUB_OUTPUT
           fi
 
@@ -50,13 +51,13 @@ jobs:
         run: |
           git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git ironfox-fork
 
-      - name: Add upstream remote and fetch
+      - name: Configure Git and add upstream
         working-directory: ./ironfox-fork
         run: |
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream $UPSTREAM_REPO
-          git fetch upstream --tags --prune
+          git fetch upstream --tags --force --prune
 
       - name: Check if new tag is available
         id: check-tag
@@ -65,19 +66,20 @@ jobs:
           CURRENT_TAG="${{ steps.get-current-tag.outputs.current_tag }}"
 
           if [ "$UPSTREAM_TAG" != "$CURRENT_TAG" ] && [ -n "$UPSTREAM_TAG" ]; then
+            echo "🔄 New tag detected: $UPSTREAM_TAG"
             echo "new_tag=true" >> $GITHUB_OUTPUT
           else
+            echo "✅ Already up to date"
             echo "new_tag=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Merge upstream changes (retain history, no force)
+      - name: Merge upstream changes
         if: steps.check-tag.outputs.new_tag == 'true'
         working-directory: ./ironfox-fork
         run: |
           TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
-          echo "Syncing upstream commit from tag $TAG into $TARGET_BRANCH..."
+          echo "Syncing upstream tag $TAG into $TARGET_BRANCH..."
           
-          # Checkout mocha branch (create if missing)
           if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
             git checkout $TARGET_BRANCH
             git pull origin $TARGET_BRANCH
@@ -85,14 +87,14 @@ jobs:
             git checkout -b $TARGET_BRANCH
           fi
           
-          # Merge upstream changes (keep commit history)
-          git merge --no-edit "refs/tags/$TAG" || {
-            echo "Merge conflicts detected. Please resolve manually.";
-            exit 1;
-          }
-
-          echo "Pushing merged mocha branch..."
-          git push origin $TARGET_BRANCH
+          if git merge --no-edit "refs/tags/$TAG"; then
+            echo "✅ Merge successful, pushing to $TARGET_BRANCH..."
+            git push origin $TARGET_BRANCH
+          else
+            echo "❌ Merge conflicts detected. Manual resolution required."
+            git merge --abort
+            exit 1
+          fi
 
       - name: Set sync completion status
         id: sync-status
@@ -120,21 +122,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-and-sync
     if: needs.check-and-sync.outputs.sync-completed == 'true'
+    
     steps:
-      - name: Checkout repository
+      - name: Checkout control repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
 
       - name: Create or update ironfox.txt
         run: |
-          echo "Last updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > ironfox.txt
-          echo "Latest synced tag: ${{ needs.check-and-sync.outputs.latest-tag }}" >> ironfox.txt
+          cat > ironfox.txt << EOF
+          Last updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          Latest synced tag: ${{ needs.check-and-sync.outputs.latest-tag }}
+          EOF
 
       - name: Commit and push changes
         run: |
           git config user.name "itsnotsos"
           git config user.email "179767921+itsnotsos@users.noreply.github.com"
           git add ironfox.txt
-          git commit -m "Updated ironfox to ${{ needs.check-and-sync.outputs.latest-tag }}" || true
+          git commit -m "Updated IronFox to ${{ needs.check-and-sync.outputs.latest-tag }}"
           git push origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+        
