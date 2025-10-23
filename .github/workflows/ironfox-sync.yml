@@ -28,9 +28,12 @@ jobs:
         id: get-upstream-tag
         run: |
           echo "Fetching latest tag from upstream..."
-          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname $UPSTREAM_REPO | 
-                       grep -v '^{}' | head -n1 | sed 's/.*refs/tags///')
-          CLEAN_TAG=$(echo "$LATEST_TAG" | sed 's/^v//')
+          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname $UPSTREAM_REPO | grep -v '^{}' | head -n1 | sed 's|.*refs/tags/||')
+          if [ -z "$LATEST_TAG" ]; then
+            echo "❌ Failed to fetch tags from upstream or no tags found."
+            exit 1
+          fi
+          CLEAN_TAG=$(echo "$LATEST_TAG" | sed 's|^v||')
           echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
           echo "original_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "📦 Latest upstream tag: $LATEST_TAG"
@@ -80,6 +83,7 @@ jobs:
           TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
           echo "Syncing upstream tag $TAG into $TARGET_BRANCH..."
           
+          # Checkout or create mocha branch
           if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
             git checkout $TARGET_BRANCH
             git pull origin $TARGET_BRANCH
@@ -87,6 +91,7 @@ jobs:
             git checkout -b $TARGET_BRANCH
           fi
           
+          # Merge upstream changes
           if git merge --no-edit "refs/tags/$TAG"; then
             echo "✅ Merge successful, pushing to $TARGET_BRANCH..."
             git push origin $TARGET_BRANCH
@@ -143,4 +148,3 @@ jobs:
           git add ironfox.txt
           git commit -m "Updated IronFox to ${{ needs.check-and-sync.outputs.latest-tag }}"
           git push origin main
-        
