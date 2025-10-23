@@ -60,7 +60,7 @@ jobs:
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream $UPSTREAM_REPO
-          git fetch upstream --tags --force --prune
+          git fetch upstream --prune --tags --force
 
       - name: Check if new tag is available
         id: check-tag
@@ -81,7 +81,15 @@ jobs:
         working-directory: ./ironfox-fork
         run: |
           TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
-          echo "Syncing upstream tag $TAG into $TARGET_BRANCH..."
+          echo "Syncing upstream branch $TAG into $TARGET_BRANCH..."
+          
+          # Check if the branch exists in upstream
+          if git rev-parse --verify "upstream/$TAG" >/dev/null 2>&1; then
+            echo "✅ Branch $TAG found in upstream."
+          else
+            echo "❌ Branch $TAG not found in upstream."
+            exit 1
+          fi
           
           # Checkout or create mocha branch
           if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
@@ -91,8 +99,8 @@ jobs:
             git checkout -b $TARGET_BRANCH
           fi
           
-          # Merge upstream changes
-          if git merge --no-edit "refs/tags/$TAG"; then
+          # Merge upstream branch
+          if git merge --no-edit "upstream/$TAG"; then
             echo "✅ Merge successful, pushing to $TARGET_BRANCH..."
             git push origin $TARGET_BRANCH
           else
@@ -116,7 +124,7 @@ jobs:
         run: |
           TAG="${{ steps.get-upstream-tag.outputs.tag }}"
           if [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ] && [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Synced upstream tag $TAG into mocha branch"
+            echo "✅ Synced upstream branch $TAG into mocha branch"
           elif [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ]; then
             echo "❌ Sync failed for new tag $TAG"
           else
