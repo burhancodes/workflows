@@ -6,153 +6,86 @@ on:
   workflow_dispatch:
 
 env:
-  UPSTREAM_REPO: 'https://github.com/ironfox-oss/IronFox'
-  FORK_REPO: 'https://github.com/burhancodes/IronFox'
-  TARGET_BRANCH: 'mocha'
+  UPSTREAM_REPO: https://github.com/ironfox-oss/IronFox
+  FORK_REPO: https://github.com/burhancodes/IronFox
+  TARGET_BRANCH: mocha
+  UPSTREAM_DEV: dev
 
 jobs:
-  check-and-sync:
+  sync:
     runs-on: ubuntu-latest
     outputs:
-      sync-completed: ${{ steps.sync-status.outputs.completed }}
-      latest-tag: ${{ steps.get-upstream-tag.outputs.tag }}
+      synced: ${{ steps.status.outputs.synced }}
+      tag: ${{ steps.tag.outputs.tag }}
 
     steps:
-      - name: Checkout control repository
+      - name: Checkout control repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.DISPATCH }}
-          fetch-depth: 0
 
       - name: Get latest upstream tag
-        id: get-upstream-tag
+        id: tag
         run: |
-          echo "Fetching latest tag from upstream..."
-          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname $UPSTREAM_REPO | grep -v '^{}' | head -n1 | sed 's|.*refs/tags/||')
-          if [ -z "$LATEST_TAG" ]; then
-            echo "❌ Failed to fetch tags from upstream or no tags found."
-            exit 1
-          fi
-          CLEAN_TAG=$(echo "$LATEST_TAG" | sed 's|^v||')
-          echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
-          echo "original_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "📦 Latest upstream tag: $LATEST_TAG"
+          TAG=$(git ls-remote --tags --sort=-v:refname ${{ env.UPSTREAM_REPO }} \
+                | grep -v '^{}' | head -n1 | cut -d/ -f3)
+          CLEAN=$(echo "$TAG" | sed 's/^v//')
+          echo "tag=$CLEAN" >> $GITHUB_OUTPUT
+          echo "raw=$TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $TAG"
 
-      - name: Get current synced tag from ironfox.txt
-        id: get-current-tag
+      - name: Get current tag
+        id: current
         run: |
-          if [ -f "ironfox.txt" ]; then
-            CURRENT_TAG=$(awk '/Latest synced tag:/ {print $4}' ironfox.txt)
-            echo "📌 Current synced tag: $CURRENT_TAG"
-            echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+          if [[ -f ironfox.txt ]]; then
+            CUR=$(grep "Latest synced tag:" ironfox.txt | awk '{print $4}')
+            echo "tag=$CUR" >> $GITHUB_OUTPUT
           else
-            echo "ℹ️ ironfox.txt not found, treating as first sync"
-            echo "current_tag=" >> $GITHUB_OUTPUT
+            echo "tag=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clone fork repository
+      - name: Clone fork & setup
         run: |
-          git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git ironfox-fork
-
-      - name: Configure Git and add upstream
-        working-directory: ./ironfox-fork
-        run: |
+          git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git fork
+          cd fork
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
-          git remote add upstream $UPSTREAM_REPO
-          git fetch upstream --prune --tags --force
+          git remote add upstream ${{ env.UPSTREAM_REPO }}
+          git fetch upstream --tags --prune
 
-      - name: Check if new tag is available
-        id: check-tag
+      - name: Sync dev if new tag
+        if: steps.tag.outputs.tag != steps.current.outputs.tag
         run: |
-          UPSTREAM_TAG="${{ steps.get-upstream-tag.outputs.tag }}"
-          CURRENT_TAG="${{ steps.get-current-tag.outputs.current_tag }}"
+          cd fork
+          git checkout -B ${{ env.TARGET_BRANCH }} origin/${{ env.TARGET_BRANCH }} || git checkout -b ${{ env.TARGET_BRANCH }}
+          git merge --no-edit upstream/${{ env.UPSTREAM_DEV }} || (git merge --abort && exit 1)
+          git push origin ${{ env.TARGET_BRANCH }}
 
-          if [ "$UPSTREAM_TAG" != "$CURRENT_TAG" ] && [ -n "$UPSTREAM_TAG" ]; then
-            echo "🔄 New tag detected: $UPSTREAM_TAG"
-            echo "new_tag=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Already up to date"
-            echo "new_tag=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Merge upstream changes
-        if: steps.check-tag.outputs.new_tag == 'true'
-        working-directory: ./ironfox-fork
+      - name: Set sync status
+        id: status
         run: |
-          TAG="${{ steps.get-upstream-tag.outputs.original_tag }}"
-          echo "Syncing upstream branch $TAG into $TARGET_BRANCH..."
-          
-          # Check if the branch exists in upstream
-          if git rev-parse --verify "upstream/$TAG" >/dev/null 2>&1; then
-            echo "✅ Branch $TAG found in upstream."
-          else
-            echo "❌ Branch $TAG not found in upstream."
-            exit 1
-          fi
-          
-          # Checkout or create mocha branch
-          if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
-            git checkout $TARGET_BRANCH
-            git pull origin $TARGET_BRANCH
-          else
-            git checkout -b $TARGET_BRANCH
-          fi
-          
-          # Merge upstream branch
-          if git merge --no-edit "upstream/$TAG"; then
-            echo "✅ Merge successful, pushing to $TARGET_BRANCH..."
-            git push origin $TARGET_BRANCH
-          else
-            echo "❌ Merge conflicts detected. Manual resolution required."
-            git merge --abort
-            exit 1
-          fi
+          echo "synced=${{ steps.tag.outputs.tag != steps.current.outputs.tag && job.status == 'success' }}" >> $GITHUB_OUTPUT
 
-      - name: Set sync completion status
-        id: sync-status
-        if: always()
-        run: |
-          if [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ] && [ "${{ job.status }}" == "success" ]; then
-            echo "completed=true" >> $GITHUB_OUTPUT
-          else
-            echo "completed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Summary
-        if: always()
-        run: |
-          TAG="${{ steps.get-upstream-tag.outputs.tag }}"
-          if [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ] && [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Synced upstream branch $TAG into mocha branch"
-          elif [ "${{ steps.check-tag.outputs.new_tag }}" == "true" ]; then
-            echo "❌ Sync failed for new tag $TAG"
-          else
-            echo "ℹ️ No new tags found. Latest tag $TAG already processed."
-          fi
-
-  log-date:
+  update-log:
+    needs: sync
+    if: needs.sync.outputs.synced == 'true'
     runs-on: ubuntu-latest
-    needs: check-and-sync
-    if: needs.check-and-sync.outputs.sync-completed == 'true'
-    
     steps:
-      - name: Checkout control repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
 
-      - name: Create or update ironfox.txt
+      - name: Update ironfox.txt
         run: |
           cat > ironfox.txt << EOF
           Last updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
-          Latest synced tag: ${{ needs.check-and-sync.outputs.latest-tag }}
+          Latest synced tag: ${{ needs.sync.outputs.tag }}
           EOF
 
-      - name: Commit and push changes
+      - name: Commit & push
         run: |
           git config user.name "itsnotsos"
           git config user.email "179767921+itsnotsos@users.noreply.github.com"
           git add ironfox.txt
-          git commit -m "Updated IronFox to ${{ needs.check-and-sync.outputs.latest-tag }}"
-          git push origin main
+          git commit -m "Synced to ${{ needs.sync.outputs.tag }}"
+          git push
