@@ -63,7 +63,7 @@ jobs:
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream ${{ env.UPSTREAM_REPO }}
           git fetch upstream ${{ env.UPSTREAM_DEV }} --depth 1
-          git fetch upstream --tags --prune
+          git fetch upstream --tags --prune --force 
 
       - name: Merge & push
         if: steps.check.outputs.new == 'true'
