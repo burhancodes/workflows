@@ -7,7 +7,6 @@ on:
 
 env:
   UPSTREAM_REPO: https://github.com/ironfox-oss/IronFox
-  FORK_REPO: https://github.com/burhancodes/IronFox
   TARGET_BRANCH: mocha
   UPSTREAM_DEV: dev
 
@@ -32,7 +31,7 @@ jobs:
           CLEAN=$(echo "$TAG" | sed 's/^v//')
           echo "tag=$CLEAN" >> $GITHUB_OUTPUT
           echo "raw=$TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag: $TAG"
+          echo "Latest upstream tag: $TAG"
 
       - name: Get current tag
         id: current
@@ -44,27 +43,39 @@ jobs:
             echo "tag=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clone fork & setup
+      - name: Check for new tag
+        id: check
         run: |
-          git clone https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git fork
+          if [[ "${{ steps.tag.outputs.tag }}" != "${{ steps.current.outputs.tag }}" ]]; then
+            echo "new=true" >> $GITHUB_OUTPUT
+          else
+            echo "new=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone mocha & fetch upstream
+        if: steps.check.outputs.new == 'true'
+        run: |
+          git clone --depth 1 --branch ${{ env.TARGET_BRANCH }} \
+            https://${{ secrets.BVTOKEN }}@github.com/burhancodes/IronFox.git fork
           cd fork
+
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream ${{ env.UPSTREAM_REPO }}
+          git fetch upstream ${{ env.UPSTREAM_DEV }} --depth 1
           git fetch upstream --tags --prune
 
-      - name: Sync dev if new tag
-        if: steps.tag.outputs.tag != steps.current.outputs.tag
+      - name: Merge & push
+        if: steps.check.outputs.new == 'true'
         run: |
           cd fork
-          git checkout -B ${{ env.TARGET_BRANCH }} origin/${{ env.TARGET_BRANCH }} || git checkout -b ${{ env.TARGET_BRANCH }}
           git merge --no-edit upstream/${{ env.UPSTREAM_DEV }} || (git merge --abort && exit 1)
           git push origin ${{ env.TARGET_BRANCH }}
 
-      - name: Set sync status
+      - name: Set status
         id: status
         run: |
-          echo "synced=${{ steps.tag.outputs.tag != steps.current.outputs.tag && job.status == 'success' }}" >> $GITHUB_OUTPUT
+          echo "synced=${{ steps.check.outputs.new == 'true' && job.status == 'success' }}" >> $GITHUB_OUTPUT
 
   update-log:
     needs: sync
