@@ -34,10 +34,14 @@ jobs:
       - name: Get current tag
         id: current
         run: |
-          CUR=$(curl -s "https://api.github.com/repos/burhancodes/IronFox/releases/latest" | jq -r '.tag_name')
-          CLEAN=$(echo "$CUR" | sed 's/^v//')
-          echo "tag=$CLEAN" >> $GITHUB_OUTPUT
-          echo "Latest synced tag: $CUR"
+          if [ -f ironfox.txt ]; then
+            CUR=$(grep "Latest synced tag:" ironfox.txt | awk '{print $NF}')
+            echo "tag=$CUR" >> $GITHUB_OUTPUT
+            echo "Latest synced tag: $CUR"
+          else
+            echo "tag=0.0.0" >> $GITHUB_OUTPUT
+            echo "No ironfox.txt found, treating as first sync"
+          fi
 
       - name: Check for new tag
         id: check
@@ -64,7 +68,7 @@ jobs:
           cd fork
           git checkout ${{ env.TARGET_BRANCH }}
           git reset --hard upstream/${{ steps.tag.outputs.raw }}
-          git cherry-pick 7aee1946a09549d630e8eb5b688421532af03d15
+          git cherry-pick 9addab3c69688a45733a861c6f42a225f424ce3d
           git push origin ${{ env.TARGET_BRANCH }} --force
 
       - name: Set status
