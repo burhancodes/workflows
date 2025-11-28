@@ -68,7 +68,7 @@ jobs:
           cd fork
           git checkout ${{ env.TARGET_BRANCH }}
           git reset --hard upstream/${{ steps.tag.outputs.raw }}
-          git cherry-pick 9addab3c69688a45733a861c6f42a225f424ce3d
+          git cherry-pick 44835a0110ae56d4d2354c34ed0e1edd710fd54d
           git cherry-pick 6595d0804d3c4cae93041d4d653916338d04756a
           git push origin ${{ env.TARGET_BRANCH }} --force
 
