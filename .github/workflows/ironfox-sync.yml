@@ -60,6 +60,7 @@ jobs:
           git config user.name "burhanverse"
           git config user.email "contact@burhanverse.eu.org"
           git remote add upstream ${{ env.UPSTREAM_REPO }}
+          git fetch origin backup 
           git fetch upstream 
 
       - name: Reset & push
