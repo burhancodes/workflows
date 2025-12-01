@@ -70,7 +70,7 @@ jobs:
           git checkout ${{ env.TARGET_BRANCH }}
           git reset --hard upstream/${{ steps.tag.outputs.raw }}
           git cherry-pick 44835a0110ae56d4d2354c34ed0e1edd710fd54d
-          git cherry-pick 6595d0804d3c4cae93041d4d653916338d04756a
+          git cherry-pick ca905daf9c227056e610b828e85ad8109e448660
           git push origin ${{ env.TARGET_BRANCH }} --force
 
       - name: Set status
