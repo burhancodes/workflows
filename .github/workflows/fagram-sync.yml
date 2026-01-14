@@ -13,7 +13,6 @@ jobs:
     - name: Configure & push
       run: |
         git clone --mirror https://x-access-token:${{ secrets.PAT }}@github.com/burhancodes/fagramdesktop.git
-        git remote add mirror https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
-        git remote set-url --push origin NO_PUSH
-        git push mirror --mirror --force
-        git remote remove mirror
+        cd fagramdesktop.git
+        git remote set-url --push origin https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
+        git push --mirror --force
