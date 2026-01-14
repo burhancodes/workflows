@@ -14,5 +14,6 @@ jobs:
       run: |
         git clone --mirror https://x-access-token:${{ secrets.PAT }}@github.com/burhancodes/fagramdesktop.git
         cd fagramdesktop.git
+        git for-each-ref --format 'delete %(refname)' refs/pull | git update-ref --stdin
         git remote set-url --push origin https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
         git push --mirror --force
