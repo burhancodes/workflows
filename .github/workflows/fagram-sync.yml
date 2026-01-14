@@ -11,14 +11,16 @@ jobs:
     
     steps:
     - name: Clone source repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: burhancodes/fagramdesktop
         token: ${{ secrets.PAT }}
         fetch-depth: 0
-    
+        
     - name: Configure & push
       run: |
+        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/burhancodes/fagramdesktop.git
+        git fetch origin '+refs/*:refs/*' --depth=0
         git remote add mirror https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
         git remote set-url --push origin NO_PUSH
         git push mirror --mirror --force
