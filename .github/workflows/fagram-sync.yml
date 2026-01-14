@@ -1,0 +1,25 @@
+name: Upd fagramdesktop
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Clone source repo
+      uses: actions/checkout@v4
+      with:
+        repository: burhancodes/fagramdesktop
+        token: ${{ secrets.PAT }}
+        fetch-depth: 0
+    
+    - name: Configure & push
+      run: |
+        git remote add mirror https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
+        git remote set-url --push origin NO_PUSH
+        git push mirror --mirror --force
+        git remote remove mirror
