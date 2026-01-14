@@ -19,8 +19,8 @@ jobs:
         
     - name: Configure & push
       run: |
-        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/burhancodes/fagramdesktop.git
-        git fetch origin '+refs/*:refs/*' --depth=0
+        git fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*' '+refs/*:refs/*'
+        git fetch --unshallow
         git remote add mirror https://x-access-token:${{ secrets.PAT }}@github.com/fagramdesktop/fagram.git
         git remote set-url --push origin NO_PUSH
         git push mirror --mirror --force
