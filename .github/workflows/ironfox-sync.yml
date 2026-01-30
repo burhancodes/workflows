@@ -69,7 +69,7 @@ jobs:
           cd fork
           git checkout ${{ env.TARGET_BRANCH }}
           git reset --hard upstream/${{ steps.tag.outputs.raw }}
-          git cherry-pick 1bc3cd48b03148559e67df0f84be341631364ee3
+          git cherry-pick f0ad7c051ff959cb902f47bd9f174f07ce9f3330
           git push origin ${{ env.TARGET_BRANCH }} --force
 
       - name: Set status
